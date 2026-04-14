@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "GhEBLtDVtWM=",
+  "success": true,
+  "projectFilePath": "C:\\My Experiments\\2026\\bpmGenie\\bpmGenie.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\user\\.nuget\\packages\\nwaves\\0.9.6\\nwaves.0.9.6.nupkg.sha512",
+    "C:\\Users\\user\\.nuget\\packages\\taglibsharp\\2.3.0\\taglibsharp.2.3.0.nupkg.sha512"
+  ],
+  "logs": []
+}
