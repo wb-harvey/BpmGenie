@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("(c) 2026 William Harvey")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d59c26996feae7a7c12aa68fba7c438077a5cc7c")]
 [assembly: System.Reflection.AssemblyProductAttribute("bpmGenie")]
 [assembly: System.Reflection.AssemblyTitleAttribute("bpmGenie")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
