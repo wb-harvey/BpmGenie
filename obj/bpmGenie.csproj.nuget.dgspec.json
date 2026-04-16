@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\My Experiments\\2026\\bpmGenie\\bpmGenie.csproj": {}
+    "C:\\My Experiments\\2026\\bpmGenie\\BpmGenie\\bpmGenie.csproj": {}
   },
   "projects": {
-    "C:\\My Experiments\\2026\\bpmGenie\\bpmGenie.csproj": {
+    "C:\\My Experiments\\2026\\bpmGenie\\BpmGenie\\bpmGenie.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\My Experiments\\2026\\bpmGenie\\bpmGenie.csproj",
+        "projectUniqueName": "C:\\My Experiments\\2026\\bpmGenie\\BpmGenie\\bpmGenie.csproj",
         "projectName": "bpmGenie",
-        "projectPath": "C:\\My Experiments\\2026\\bpmGenie\\bpmGenie.csproj",
+        "projectPath": "C:\\My Experiments\\2026\\bpmGenie\\BpmGenie\\bpmGenie.csproj",
         "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "C:\\My Experiments\\2026\\bpmGenie\\obj\\",
+        "outputPath": "C:\\My Experiments\\2026\\bpmGenie\\BpmGenie\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
