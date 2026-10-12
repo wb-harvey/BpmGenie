@@ -16,8 +16,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The test bench is its own project -->
+    <Compile Remove="Bench\**" />
+    <EmbeddedResource Remove="Bench\**" />
+    <None Remove="Bench\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- FFmpeg 9.0.2 (LGPL), the build sealed for the ABX apps, in an ffmpeg
-         folder next to bpmGenie.exe (see BpmAnalyzer) -->
+         folder next to bpmGenie.exe (see AudioDecoder) -->
     <None Include="C:\tools\abx\ffmpeg\ffmpeg.exe" Link="ffmpeg\ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
