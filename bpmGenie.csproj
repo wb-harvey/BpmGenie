@@ -16,9 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="ffmpeg.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <!-- FFmpeg 9.0.2 (LGPL), the build sealed for the ABX apps, in an ffmpeg
+         folder next to bpmGenie.exe (see BpmAnalyzer) -->
+    <None Include="C:\tools\abx\ffmpeg\ffmpeg.exe" Link="ffmpeg\ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

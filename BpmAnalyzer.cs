@@ -32,17 +32,21 @@ namespace bpmGenie
 
             try
             {
-                // Note: user said "ffmpeg is in the project folder", so it will be beside the executable or in the CWD
-                string ffmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
+                // ffmpeg ships in an "ffmpeg" folder next to the EXE; an older
+                // install may have it next to the EXE or in the working directory
+                string appDir = AppDomain.CurrentDomain.BaseDirectory;
+                string ffmpegPath = Path.Combine(appDir, "ffmpeg", "ffmpeg.exe");
+                if (!File.Exists(ffmpegPath))
+                    ffmpegPath = Path.Combine(appDir, "ffmpeg.exe");
                 if (!File.Exists(ffmpegPath))
                 {
                     // Fallback to project dir if running from IDE
                     ffmpegPath = Path.Combine(Directory.GetCurrentDirectory(), "ffmpeg.exe");
                 }
-                
+
                 if (!File.Exists(ffmpegPath))
                 {
-                    throw new FileNotFoundException("ffmpeg.exe not found. Please ensure it is in the project folder.", ffmpegPath);
+                    throw new FileNotFoundException("ffmpeg.exe not found in " + Path.Combine(appDir, "ffmpeg"), ffmpegPath);
                 }
 
                 string timeArgs = "";
