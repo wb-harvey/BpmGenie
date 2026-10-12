@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- The BPM analysis of bpmGenie as a library (BpmGenie.Core.dll), for bpmGenie itself and for other apps
-       (RapidTagger). LGPL 2.1, like bpmGenie. -->
+       (RapidTagger). MIT, like bpmGenie. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -12,7 +12,7 @@
     <Product>BpmGenie.Core</Product>
     <Description>BPM detection of bpmGenie: complex domain onsets, autocorrelation, fractional beat period</Description>
     <Copyright>(c) 2026 William Harvey</Copyright>
-    <PackageLicenseExpression>LGPL-2.1-or-later</PackageLicenseExpression>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

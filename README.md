@@ -1,8 +1,8 @@
-BPM Scanner (LGPL-2.1)
-======================
+BPM Scanner (MIT)
+=================
 
 BPM Scanner is an open-source windows program designed to automatically detect the tempo (Beats Per Minute) of audio files. 
-It is released under the GNU Lesser General Public License v2.1.
+It is released under the MIT License.
 
 FEATURES
 --------
@@ -17,7 +17,7 @@ FEATURES
 *** Uses FFmpeg to read files (ffmpeg.org), LGPL
 *** Uses NWAVES to analyze audio (https://github.com/ar1st0crat/NWaves), MIT
 *** Uses Taglib# to read/write ID3 tags (https://github.com/mono/taglib-sharp), LGPL
-*** Open-source under LGPL-2.1.
+*** Open-source under the MIT License.
 
 INSTALLATION
 ------------
@@ -35,7 +35,7 @@ Close or repeat
 
 LIBRARY
 
-BpmGenie.Core (BpmGenie.Core.dll, net10.0, LGPL 2.1) holds the BPM analysis (bpmGenie.BpmAnalyzerV2).
+BpmGenie.Core (BpmGenie.Core.dll, net10.0, MIT) holds the BPM analysis (bpmGenie.BpmAnalyzerV2).
 bpmGenie and the bench use it, and other programs can too: decode the audio to mono float samples at
 BpmAnalyzerV2.SampleRate (11025 Hz) and call BpmAnalyzerV2.Analyze(samples, cancellationToken), which returns
 the BPM rounded to a whole number, or 0 for silence or no beat. It needs NWaves.dll (MIT) next to it.
@@ -50,11 +50,9 @@ It writes results.csv (one row per song) and summary.txt (V1 vs V2 agreement and
 
 LICENSE
 -------
-This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option) any later version.
+Copyright (c) 2026 William Harvey
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License along with this program (the LICENSE file). If not, see <https://www.gnu.org/licenses/>.
+bpmGenie is released under the MIT License: you may use, copy, modify, merge, publish, distribute, sublicense and/or sell copies of it, provided the copyright notice and permission notice are included. It is provided "as is", without warranty of any kind. See the LICENSE file for the full text.
 
 bpmGenie ships with NWaves (MIT), TagLib# (LGPL 2.1) and an LGPL build of FFmpeg 9.0.2, each under its own license. The release's licenses folder has their notices and license texts (THIRD-PARTY-NOTICES.txt).
 
