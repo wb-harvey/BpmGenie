@@ -16,10 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The app's decoder and analyzers, compiled in unchanged -->
+    <!-- The app's decoder and V1 analyzer, compiled in unchanged; V2 is the BpmGenie.Core library -->
     <Compile Include="..\AudioDecoder.cs" Link="App\AudioDecoder.cs" />
     <Compile Include="..\BpmAnalyzerV1.cs" Link="App\BpmAnalyzerV1.cs" />
-    <Compile Include="..\BpmAnalyzerV2.cs" Link="App\BpmAnalyzerV2.cs" />
+    <ProjectReference Include="..\BpmGenie.Core\BpmGenie.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

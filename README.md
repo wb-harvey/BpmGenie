@@ -33,6 +33,13 @@ Run the program. Bypass the stupid Windows smartscreen warnings, because it has 
 4. Click Apply to save BPM values to ID3 tags
 Close or repeat
 
+LIBRARY
+
+BpmGenie.Core (BpmGenie.Core.dll, net10.0, LGPL 2.1) holds the BPM analysis (bpmGenie.BpmAnalyzerV2).
+bpmGenie and the bench use it, and other programs can too: decode the audio to mono float samples at
+BpmAnalyzerV2.SampleRate (11025 Hz) and call BpmAnalyzerV2.Analyze(samples, cancellationToken), which returns
+the BPM rounded to a whole number, or 0 for silence or no beat. It needs NWaves.dll (MIT) next to it.
+
 TESTING
 -------
 Bench\bpmGenie.Bench is a console program that runs the 1.0 analysis (BpmAnalyzerV1) and the

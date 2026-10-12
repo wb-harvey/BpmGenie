@@ -1,3 +1,12 @@
+// BpmGenie.Core - BPM detection of bpmGenie
+// Copyright (c) 2026 William Harvey
+//
+// This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser
+// General Public License as published by the Free Software Foundation; either version 2.1 of the License, or
+// (at your option) any later version. It is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License (LICENSE) for more details.
+
 using System;
 using System.Threading;
 using NWaves.Transforms;
@@ -13,6 +22,9 @@ namespace bpmGenie
     /// </summary>
     public static class BpmAnalyzerV2
     {
+        /// <summary>The sample rate Analyze expects (mono): low, which favours bass and rhythm and is fast.</summary>
+        public const int SampleRate = 11025;
+
         private const int FftSize = 1024;
         private const int HopSize = 256;
 
@@ -20,7 +32,7 @@ namespace bpmGenie
         private const float SilencePeak = 0.001f;
 
         /// <summary>
-        /// Detects the BPM of mono samples at <see cref="AudioDecoder.SampleRate"/>.
+        /// Detects the BPM of mono samples at <see cref="SampleRate"/>.
         /// </summary>
         /// <returns>Detected BPM rounded to nearest integer, or 0 if the audio is silent or has no beat.</returns>
         public static int Analyze(float[] signal, CancellationToken ct)
@@ -128,7 +140,7 @@ namespace bpmGenie
             const int MinBpm = 60;
             const int MaxBpm = 200;
 
-            float frameRate = (float)AudioDecoder.SampleRate / HopSize;
+            float frameRate = (float)SampleRate / HopSize;
             int maxLag = (int)(frameRate * 60 / MinBpm);
             int minLag = (int)(frameRate * 60 / MaxBpm);
 

@@ -16,10 +16,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The test bench is its own project -->
-    <Compile Remove="Bench\**" />
-    <EmbeddedResource Remove="Bench\**" />
-    <None Remove="Bench\**" />
+    <!-- The test bench and the analysis library are their own projects -->
+    <Compile Remove="Bench\**;BpmGenie.Core\**" />
+    <EmbeddedResource Remove="Bench\**;BpmGenie.Core\**" />
+    <None Remove="Bench\**;BpmGenie.Core\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The BPM analysis (BpmAnalyzerV2), also used by other apps as BpmGenie.Core.dll -->
+    <ProjectReference Include="BpmGenie.Core\BpmGenie.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

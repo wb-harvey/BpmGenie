@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The BPM analysis of bpmGenie as a library (BpmGenie.Core.dll), for bpmGenie itself and for other apps
+       (RapidTagger). LGPL 2.1, like bpmGenie. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>bpmGenie</RootNamespace>
+    <AssemblyName>BpmGenie.Core</AssemblyName>
+    <Version>2.0.3</Version>
+    <Product>BpmGenie.Core</Product>
+    <Description>BPM detection of bpmGenie: complex domain onsets, autocorrelation, fractional beat period</Description>
+    <Copyright>(c) 2026 William Harvey</Copyright>
+    <PackageLicenseExpression>LGPL-2.1-or-later</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NWaves" Version="0.9.6" />
+  </ItemGroup>
+
+</Project>

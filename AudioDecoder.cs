@@ -11,7 +11,7 @@ namespace bpmGenie
     /// </summary>
     public static class AudioDecoder
     {
-        public const int SampleRate = 11025; // Lower sample rate focuses on bass/rhythm and speeds up processing
+        public const int SampleRate = BpmAnalyzerV2.SampleRate; // Lower sample rate focuses on bass/rhythm and speeds up processing
         private const int NumChannels = 1; // mono
 
         /// <summary>
