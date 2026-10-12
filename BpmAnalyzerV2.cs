@@ -16,15 +16,23 @@ namespace bpmGenie
         private const int FftSize = 1024;
         private const int HopSize = 256;
 
+        // Peak level (-60 dBFS) below which the audio counts as silent
+        private const float SilencePeak = 0.001f;
+
         /// <summary>
         /// Detects the BPM of mono samples at <see cref="AudioDecoder.SampleRate"/>.
         /// </summary>
-        /// <returns>Detected BPM rounded to nearest integer, or 0 if detection failed.</returns>
+        /// <returns>Detected BPM rounded to nearest integer, or 0 if the audio is silent or has no beat.</returns>
         public static int Analyze(float[] signal, CancellationToken ct)
         {
             if (signal.Length == 0) return 0;
 
             ct.ThrowIfCancellationRequested();
+
+            // Silence (or noise far below music level) has no tempo; its onsets would be random
+            float peak = 0f;
+            foreach (float sample in signal) peak = Math.Max(peak, Math.Abs(sample));
+            if (peak < SilencePeak) return 0;
 
             int framesCount = (signal.Length - FftSize) / HopSize + 1;
             if (framesCount < 10) return 0;
@@ -151,7 +159,8 @@ namespace bpmGenie
                 }
             }
 
-            if (bestLag == 0) return 0;
+            // No onsets at all scores every lag 0; don't report the first lag tried (215 BPM)
+            if (bestLag == 0 || maxCorrelation <= 0) return 0;
 
             return (int)Math.Round(60.0 * frameRate / RefineBeatPeriod(smoothedOdf, bestLag));
         }

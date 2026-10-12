@@ -144,15 +144,9 @@ public partial class frmMain : Form
                     // Call the BpmAnalyzer (timeout/cancellation supported)
                     int predictedBpm = await BpmAnalyzer.DetectBpmAsync(file, _cancellationTokenSource.Token, 0, 60);
 
-                    if (predictedBpm > 0)
-                    {
-                        row.Cells[colStatus.Index].Value = "Completed";
-                        row.Cells[colBpm.Index].Value = predictedBpm.ToString();
-                    }
-                    else
-                    {
-                        row.Cells[colStatus.Index].Value = "Failed - No beat detected";
-                    }
+                    // 0 means silent or no beat; Apply saves it as no BPM
+                    row.Cells[colStatus.Index].Value = "Completed";
+                    row.Cells[colBpm.Index].Value = predictedBpm.ToString();
                 }
                 catch (OperationCanceledException)
                 {
@@ -252,7 +246,9 @@ public partial class frmMain : Form
 
             if (status == "Completed" && uint.TryParse(bpmStr, out uint bpmVal) && !string.IsNullOrEmpty(filePath))
             {
-                if (uint.TryParse(tagStr, out uint tagVal) && tagVal == bpmVal)
+                // A blank Tag is no BPM, the same as 0
+                uint tagVal = uint.TryParse(tagStr, out uint parsed) ? parsed : 0;
+                if (tagVal == bpmVal)
                 {
                     // The file already has this BPM; skip rewriting it
                     row.Cells[colStatus.Index].Value = "Unchanged";
@@ -288,7 +284,7 @@ public partial class frmMain : Form
                 if (error == null)
                 {
                     row.Cells[colStatus.Index].Value = "Saved!";
-                    row.Cells[colTag.Index].Value = bpmVal.ToString();
+                    row.Cells[colTag.Index].Value = bpmVal > 0 ? bpmVal.ToString() : "";
                     savedCount++;
                 }
                 else
@@ -317,8 +313,9 @@ public partial class frmMain : Form
 
     /// <summary>
     /// Writes <paramref name="bpm"/> to the file's ID3v2 tag, keeping its version
-    /// (2.3 or 2.4), or to a new ID3v2.3 tag if the file has none. Other tags are
-    /// left as they are. Returns null on success, or the error message.
+    /// (2.3 or 2.4), or to a new ID3v2.3 tag if the file has none. A BPM of 0
+    /// removes the BPM from the tag. Other tags are left as they are. Returns
+    /// null on success, or the error message.
     /// </summary>
     private static string? SaveBpm(string filePath, uint bpm)
     {
@@ -327,9 +324,14 @@ public partial class frmMain : Form
             using var file = TagLib.File.Create(filePath);
             var tagsOnDisk = file.TagTypesOnDisk;
 
+            // No BPM to clear, and no reason to add an empty tag
+            if (bpm == 0 && !tagsOnDisk.HasFlag(TagLib.TagTypes.Id3v2))
+                return null;
+
             if (file.GetTag(TagLib.TagTypes.Id3v2, true) is not TagLib.Id3v2.Tag id3v2)
                 return "This file can't hold an ID3v2 tag";
 
+            // TagLib removes the BPM (TBPM) frame for 0
             id3v2.BeatsPerMinute = bpm;
 
             // TagLib adds an empty ID3v1 tag to every MP3 it opens; don't write one the file didn't have
