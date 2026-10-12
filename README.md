@@ -1,8 +1,8 @@
-BPM Scanner (GPLv3)
-===================
+BPM Scanner (LGPL-2.1)
+======================
 
 BPM Scanner is an open-source windows program designed to automatically detect the tempo (Beats Per Minute) of audio files. 
-It is released under the GNU General Public License v3.0.
+It is released under the GNU Lesser General Public License v2.1.
 
 FEATURES
 --------
@@ -17,7 +17,7 @@ FEATURES
 *** Uses FFmpeg to read files (ffmpeg.org), LGPL
 *** Uses NWAVES to analyze audio (https://github.com/ar1st0crat/NWaves), MIT
 *** Uses Taglib# to read/write ID3 tags (https://github.com/mono/taglib-sharp), LGPL
-*** Open-source under GPLv3.
+*** Open-source under LGPL-2.1.
 
 INSTALLATION
 ------------
@@ -43,11 +43,11 @@ It writes results.csv (one row per song) and summary.txt (V1 vs V2 agreement and
 
 LICENSE
 -------
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+You should have received a copy of the GNU Lesser General Public License along with this program (the LICENSE file). If not, see <https://www.gnu.org/licenses/>.
 
 CONTRIBUTING
 ------------
