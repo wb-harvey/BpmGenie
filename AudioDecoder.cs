@@ -67,7 +67,23 @@ namespace bpmGenie
                 var stderrTask = process.StandardError.ReadToEndAsync((CancellationToken)default);
 
                 // Wait for ffmpeg to finish
-                await process.WaitForExitAsync(ct).ConfigureAwait(false);
+                try
+                {
+                    await process.WaitForExitAsync(ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Canceling only stops the wait; stop ffmpeg too, and let it exit so it
+                    // releases the temp file before the finally below deletes it
+                    try
+                    {
+                        process.Kill();
+                        process.WaitForExit(5000);
+                    }
+                    catch (InvalidOperationException) { /* already exited */ }
+                    catch (System.ComponentModel.Win32Exception) { /* exiting; can't be stopped */ }
+                    throw;
+                }
                 string stderr = await stderrTask.ConfigureAwait(false);
 
                 if (process.ExitCode != 0)
