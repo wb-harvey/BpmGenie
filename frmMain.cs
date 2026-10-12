@@ -17,7 +17,7 @@ public partial class frmMain : Form
     {
         InitializeComponent();
         
-        // Ensure TagLib saves ID3v2.3 by default per user request
+        // Set TagLib to save ID3v2.3 by default
         TagLib.Id3v2.Tag.DefaultVersion = 3;
         TagLib.Id3v2.Tag.ForceDefaultVersion = false;
     }
