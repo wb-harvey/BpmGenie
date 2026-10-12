@@ -19,8 +19,7 @@ namespace bpmGenie
         {
             float[] signal = await AudioDecoder.DecodeAsync(filePath, ct, startSeconds, durationSeconds).ConfigureAwait(false);
 
-            // V1 until BpmAnalyzerV2 passes the comparison against the test bank (see Bench)
-            return await Task.Run(() => BpmAnalyzerV1.Analyze(signal, ct), ct).ConfigureAwait(false);
+            return await Task.Run(() => BpmAnalyzerV2.Analyze(signal, ct), ct).ConfigureAwait(false);
         }
     }
 }

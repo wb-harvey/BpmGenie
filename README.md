@@ -11,9 +11,9 @@ FEATURES
 * Inspired by the digital signal processing (DSP) strategy from MIXXX (https://mixxx.org/), GPL
 ** Uses FFmpeg to decode the first 60 seconds into mono 11025Hz PCM data
 ** Computes the Short-Time Fourier Transform (STFT)
-** Isolates low-frequency bands (bass/kick regions)
-** Computes the Spectral Flux to find beat onsets
-** Uses an Inter-Onset-Interval (IOI) Histogram to group peak deltas and vote on the best BPM, with log-normal prior weighting 
+** Uses complex domain onset detection (change in magnitude and phase) to find beat onsets
+** Autocorrelates the onsets over 60-200 BPM, with log-normal prior weighting around 120 BPM
+** Refines the beat period to a fraction of a frame, so the BPM isn't limited to coarse steps (2.0)
 *** Uses FFmpeg to read files (ffmpeg.org), LGPL
 *** Uses NWAVES to analyze audio (https://github.com/ar1st0crat/NWaves), MIT
 *** Uses Taglib# to read/write ID3 tags (https://github.com/mono/taglib-sharp), LGPL
