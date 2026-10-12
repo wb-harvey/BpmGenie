@@ -22,7 +22,7 @@ public partial class frmMain : Form
         InitializeComponent();
         FormClosing += frmMain_FormClosing;
 
-        // Set TagLib to save ID3v2.3 by default
+        // New ID3v2 tags are 2.3; an existing 2.3 or 2.4 tag keeps its version when saved
         TagLib.Id3v2.Tag.DefaultVersion = 3;
         TagLib.Id3v2.Tag.ForceDefaultVersion = false;
     }
@@ -79,7 +79,7 @@ public partial class frmMain : Form
         splash.Show(this);
         splash.Refresh(); // Force immediate paint to avoid white-box freezing
 
-        List<(string file, string artist, string title)> fileDataList;
+        List<(string file, string artist, string title, uint tagBpm)> fileDataList;
         try
         {
             // Push heavy file IO and TagLib reading to background thread
@@ -112,7 +112,8 @@ public partial class frmMain : Form
         gridFiles.SuspendLayout();
         foreach (var data in fileDataList)
         {
-            int rowIndex = gridFiles.Rows.Add(Path.GetFileName(data.file), data.title, data.artist, "Pending...", "", data.file);
+            int rowIndex = gridFiles.Rows.Add(Path.GetFileName(data.file), data.title, data.artist, "Pending...", "",
+                data.tagBpm > 0 ? data.tagBpm.ToString() : "", data.file);
             rows.Add(gridFiles.Rows[rowIndex]);
         }
         gridFiles.ResumeLayout();
@@ -132,8 +133,11 @@ public partial class frmMain : Form
                 var file = fileDataList[i].file;
                 var row = rows[i];
 
-                row.Cells[3].Value = "Scanning..."; // Status col is now index 3
-                gridFiles.FirstDisplayedScrollingRowIndex = Math.Max(0, row.Index - 5);
+                row.Cells[colStatus.Index].Value = "Scanning...";
+
+                // Scrolling throws when the grid is too short to show any row
+                if (gridFiles.DisplayedRowCount(true) > 0)
+                    gridFiles.FirstDisplayedScrollingRowIndex = Math.Max(0, row.Index - 5);
 
                 try
                 {
@@ -142,23 +146,23 @@ public partial class frmMain : Form
 
                     if (predictedBpm > 0)
                     {
-                        row.Cells[3].Value = "Completed";
-                        row.Cells[4].Value = predictedBpm.ToString(); // BPM col is now index 4
+                        row.Cells[colStatus.Index].Value = "Completed";
+                        row.Cells[colBpm.Index].Value = predictedBpm.ToString();
                     }
                     else
                     {
-                        row.Cells[3].Value = "Failed - No beat detected";
+                        row.Cells[colStatus.Index].Value = "Failed - No beat detected";
                     }
                 }
                 catch (OperationCanceledException)
                 {
-                    row.Cells[3].Value = "Canceled";
+                    row.Cells[colStatus.Index].Value = "Canceled";
                     throw;
                 }
                 catch (Exception ex)
                 {
-                    row.Cells[3].Value = "Error";
-                    row.Cells[4].ToolTipText = ex.Message;
+                    row.Cells[colStatus.Index].Value = "Error";
+                    row.Cells[colBpm.Index].ToolTipText = ex.Message;
                 }
 
                 completedCount++;
@@ -186,11 +190,12 @@ public partial class frmMain : Form
     }
 
     /// <summary>
-    /// Every MP3 under <paramref name="folderPath"/> with its artist and title.
+    /// Every MP3 under <paramref name="folderPath"/> with its artist, title and
+    /// the BPM already in its tag (0 if none).
     /// Folders that can't be opened, and system folders such as the Recycle Bin
     /// and System Volume Information, are skipped.
     /// </summary>
-    private static List<(string file, string artist, string title)> FindMp3Files(string folderPath)
+    private static List<(string file, string artist, string title, uint tagBpm)> FindMp3Files(string folderPath)
     {
         var options = new EnumerationOptions
         {
@@ -199,12 +204,13 @@ public partial class frmMain : Form
             AttributesToSkip = FileAttributes.System
         };
         var mp3Files = Directory.EnumerateFiles(folderPath, "*.mp3", options).ToList();
-        var results = new List<(string file, string artist, string title)>();
+        var results = new List<(string file, string artist, string title, uint tagBpm)>();
 
         foreach (var file in mp3Files)
         {
             string artist = "";
             string title = "";
+            uint tagBpm = 0;
             try
             {
                 using var tFile = TagLib.File.Create(file);
@@ -213,10 +219,14 @@ public partial class frmMain : Form
                     artist = tFile.Tag.FirstPerformer ?? "";
                     title = tFile.Tag.Title ?? "";
                 }
+
+                // The BPM from the ID3v2 tag (any version), the tag Apply writes
+                if (tFile.GetTag(TagLib.TagTypes.Id3v2) is TagLib.Id3v2.Tag id3v2)
+                    tagBpm = id3v2.BeatsPerMinute;
             }
             catch { /* Ignore unreadable tags */ }
 
-            results.Add((file, artist, title));
+            results.Add((file, artist, title, tagBpm));
         }
         return results;
     }
@@ -230,16 +240,29 @@ public partial class frmMain : Form
             return;
         }
 
-        // Only attempt to save if we have a successful BPM computation
+        // Only attempt to save if we have a successful BPM computation that differs from the tag
         var pending = new List<(DataGridViewRow row, uint bpm, string filePath)>();
+        int unchangedCount = 0;
         foreach (DataGridViewRow row in gridFiles.Rows)
         {
-            string status = row.Cells[3].Value?.ToString() ?? "";
-            string bpmStr = row.Cells[4].Value?.ToString() ?? "";
-            string filePath = row.Cells[5].Value?.ToString() ?? "";
+            string status = row.Cells[colStatus.Index].Value?.ToString() ?? "";
+            string bpmStr = row.Cells[colBpm.Index].Value?.ToString() ?? "";
+            string tagStr = row.Cells[colTag.Index].Value?.ToString() ?? "";
+            string filePath = row.Cells[colPath.Index].Value?.ToString() ?? "";
 
             if (status == "Completed" && uint.TryParse(bpmStr, out uint bpmVal) && !string.IsNullOrEmpty(filePath))
-                pending.Add((row, bpmVal, filePath));
+            {
+                if (uint.TryParse(tagStr, out uint tagVal) && tagVal == bpmVal)
+                {
+                    // The file already has this BPM; skip rewriting it
+                    row.Cells[colStatus.Index].Value = "Unchanged";
+                    unchangedCount++;
+                }
+                else
+                {
+                    pending.Add((row, bpmVal, filePath));
+                }
+            }
         }
 
         int savedCount = 0;
@@ -258,19 +281,20 @@ public partial class frmMain : Form
             {
                 if (token.IsCancellationRequested) break;
 
-                row.Cells[3].Value = "Saving...";
+                row.Cells[colStatus.Index].Value = "Saving...";
 
                 // Save off the UI thread so the window stays responsive
                 string? error = await Task.Run(() => SaveBpm(filePath, bpmVal));
                 if (error == null)
                 {
-                    row.Cells[3].Value = "Saved!";
+                    row.Cells[colStatus.Index].Value = "Saved!";
+                    row.Cells[colTag.Index].Value = bpmVal.ToString();
                     savedCount++;
                 }
                 else
                 {
-                    row.Cells[3].Value = "Save Error";
-                    row.Cells[4].ToolTipText = error;
+                    row.Cells[colStatus.Index].Value = "Save Error";
+                    row.Cells[colBpm.Index].ToolTipText = error;
                     errorCount++;
                 }
 
@@ -285,24 +309,32 @@ public partial class frmMain : Form
             _applyCancellation = null;
             btnApply.Text = "Apply";
             btnSelectFolder.Enabled = true;
-            lblStatus.Text = $"Apply operation {(stopped ? "stopped" : "complete")}. Saved: {savedCount}, Errors: {errorCount}";
+            lblStatus.Text = $"Apply operation {(stopped ? "stopped" : "complete")}. Saved: {savedCount}, Unchanged: {unchangedCount}, Errors: {errorCount}";
 
             if (_closeWhenIdle) Close();
         }
     }
 
     /// <summary>
-    /// Writes <paramref name="bpm"/> to the file's tag. Returns null on success,
-    /// or the error message.
+    /// Writes <paramref name="bpm"/> to the file's ID3v2 tag, keeping its version
+    /// (2.3 or 2.4), or to a new ID3v2.3 tag if the file has none. Other tags are
+    /// left as they are. Returns null on success, or the error message.
     /// </summary>
     private static string? SaveBpm(string filePath, uint bpm)
     {
         try
         {
             using var file = TagLib.File.Create(filePath);
+            var tagsOnDisk = file.TagTypesOnDisk;
 
-            // Creates ID3v2.3 if not found, or updates v2.3/2.4 if present
-            file.Tag.BeatsPerMinute = bpm;
+            if (file.GetTag(TagLib.TagTypes.Id3v2, true) is not TagLib.Id3v2.Tag id3v2)
+                return "This file can't hold an ID3v2 tag";
+
+            id3v2.BeatsPerMinute = bpm;
+
+            // TagLib adds an empty ID3v1 tag to every MP3 it opens; don't write one the file didn't have
+            if (!tagsOnDisk.HasFlag(TagLib.TagTypes.Id3v1))
+                file.RemoveTags(TagLib.TagTypes.Id3v1);
 
             file.Save();
             return null;

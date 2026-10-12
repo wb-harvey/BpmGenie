@@ -19,6 +19,7 @@ partial class frmMain
         System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
         System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
         System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
+        System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
         this.pnlTop = new System.Windows.Forms.Panel();
         this.lblTitle = new System.Windows.Forms.Label();
         this.btnSelectFolder = new System.Windows.Forms.Button();
@@ -33,6 +34,7 @@ partial class frmMain
         this.colArtist = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colStatus = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colBpm = new System.Windows.Forms.DataGridViewTextBoxColumn();
+        this.colTag = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colPath = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.pnlTop.SuspendLayout();
         this.pnlBottom.SuspendLayout();
@@ -169,6 +171,7 @@ partial class frmMain
         this.colArtist,
         this.colStatus,
         this.colBpm,
+        this.colTag,
         this.colPath});
         dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
         dataGridViewCellStyle2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(45)))));
@@ -241,6 +244,15 @@ partial class frmMain
         this.colBpm.ReadOnly = true;
         this.colBpm.Width = 80;
         // 
+        // colTag
+        // 
+        dataGridViewCellStyle5.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+        this.colTag.DefaultCellStyle = dataGridViewCellStyle5;
+        this.colTag.HeaderText = "Tag";
+        this.colTag.Name = "colTag";
+        this.colTag.ReadOnly = true;
+        this.colTag.Width = 80;
+        // 
         // colPath
         // 
         this.colPath.HeaderText = "Path";
@@ -257,6 +269,7 @@ partial class frmMain
         this.Controls.Add(this.gridFiles);
         this.Controls.Add(this.pnlBottom);
         this.Controls.Add(this.pnlTop);
+        this.MinimumSize = new System.Drawing.Size(660, 400);
         this.Name = "frmMain";
         this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
         this.Text = "BPM Genie - MP3 BPM Scanner";
@@ -283,5 +296,6 @@ partial class frmMain
     private System.Windows.Forms.DataGridViewTextBoxColumn colArtist;
     private System.Windows.Forms.DataGridViewTextBoxColumn colStatus;
     private System.Windows.Forms.DataGridViewTextBoxColumn colBpm;
+    private System.Windows.Forms.DataGridViewTextBoxColumn colTag;
     private System.Windows.Forms.DataGridViewTextBoxColumn colPath;
 }
