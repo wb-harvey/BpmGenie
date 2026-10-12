@@ -8,7 +8,8 @@ namespace bpmGenie
     /// <summary>
     /// BPM analysis for bpmGenie 2.0: the V1 method (complex domain onset
     /// detection and autocorrelation) with the framing, windowing and FFT done by
-    /// the NWaves short-time Fourier transform.
+    /// the NWaves short-time Fourier transform, and the autocorrelation peak
+    /// refined to a fractional lag.
     /// </summary>
     public static class BpmAnalyzerV2
     {
@@ -111,7 +112,8 @@ namespace bpmGenie
 
         /// <summary>
         /// Autocorrelates the onset function over lags covering 60-200 BPM,
-        /// weighted toward 120 BPM, and returns the best scoring tempo.
+        /// picks the best lag weighted toward 120 BPM (as V1), and refines it to
+        /// a fractional lag so the tempo isn't limited to whole frame lags.
         /// </summary>
         private static int EstimateTempo(float[] smoothedOdf)
         {
@@ -124,7 +126,7 @@ namespace bpmGenie
 
             if (maxLag >= smoothedOdf.Length) maxLag = smoothedOdf.Length - 1;
 
-            float bestBpm = 0f;
+            int bestLag = 0;
             float maxCorrelation = -1f;
 
             for (int lag = minLag; lag <= maxLag; lag++)
@@ -145,11 +147,84 @@ namespace bpmGenie
                 if (correlation > maxCorrelation)
                 {
                     maxCorrelation = correlation;
-                    bestBpm = currentBpm;
+                    bestLag = lag;
                 }
             }
 
-            return (int)Math.Round(bestBpm);
+            if (bestLag == 0) return 0;
+
+            return (int)Math.Round(60.0 * frameRate / RefineBeatPeriod(smoothedOdf, bestLag));
+        }
+
+        /// <summary>
+        /// Refines a whole-frame beat period to a fractional one. The period is
+        /// first interpolated at its own peak, then again at the peaks near 2, 4
+        /// and 8 periods, where a fraction of a frame is a 2, 4 and 8 times smaller
+        /// share of the period. Stops before a multiple overlaps less than half of
+        /// the onset function.
+        /// </summary>
+        private static double RefineBeatPeriod(float[] smoothedOdf, int lag)
+        {
+            double period = PeakLag(smoothedOdf, lag);
+
+            foreach (int multiple in new[] { 2, 4, 8 })
+            {
+                int centre = (int)Math.Round(period * multiple);
+                if (centre + 2 > smoothedOdf.Length / 2) break;
+
+                // The estimate is within a frame of the peak at this multiple
+                int peak = centre;
+                double best = MeanProduct(smoothedOdf, centre);
+                foreach (int candidate in new[] { centre - 1, centre + 1 })
+                {
+                    double value = MeanProduct(smoothedOdf, candidate);
+                    if (value > best)
+                    {
+                        best = value;
+                        peak = candidate;
+                    }
+                }
+
+                period = PeakLag(smoothedOdf, peak) / multiple;
+            }
+
+            return period;
+        }
+
+        /// <summary>
+        /// Fits a parabola through the correlation at <paramref name="lag"/> and its
+        /// two neighbours and returns the lag at its peak, within half a frame of
+        /// <paramref name="lag"/>, or <paramref name="lag"/> if the three points
+        /// don't form a peak.
+        /// </summary>
+        private static double PeakLag(float[] smoothedOdf, int lag)
+        {
+            if (lag < 2 || lag + 1 >= smoothedOdf.Length) return lag;
+
+            double before = MeanProduct(smoothedOdf, lag - 1);
+            double at = MeanProduct(smoothedOdf, lag);
+            double after = MeanProduct(smoothedOdf, lag + 1);
+
+            double curvature = before - 2 * at + after;
+            if (curvature >= 0) return lag;
+
+            double offset = 0.5 * (before - after) / curvature;
+            return lag + Math.Clamp(offset, -0.5, 0.5);
+        }
+
+        /// <summary>
+        /// Autocorrelation at <paramref name="lag"/> divided by the number of
+        /// overlapping frames, so longer lags aren't penalised for overlapping less.
+        /// </summary>
+        private static double MeanProduct(float[] smoothedOdf, int lag)
+        {
+            int count = smoothedOdf.Length - lag;
+            double sum = 0;
+            for (int i = 0; i < count; i++)
+            {
+                sum += smoothedOdf[i] * smoothedOdf[i + lag];
+            }
+            return sum / count;
         }
     }
 }

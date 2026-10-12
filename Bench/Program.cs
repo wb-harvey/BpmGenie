@@ -93,7 +93,8 @@ static class Program
         if (limit.HasValue) files = files.Take(limit.Value).ToList();
 
         Console.WriteLine($"Songs:     {songFolder} ({files.Count} MP3s)");
-        Console.WriteLine($"Reference: {(referencePath ?? "none")} ({reference.WithBpm} rows with a BPM)");
+        Console.WriteLine($"Reference: {(referencePath ?? "none")}" +
+            (reference.Columns.Count > 0 ? $" ({reference.Rows} songs, {string.Join(", ", reference.Columns)})" : ""));
         Console.WriteLine($"Results:   {outFolder}");
         Console.WriteLine($"Analysing {startSeconds} s for {durationSeconds} s of each song, {jobs} at a time. Ctrl+C stops and keeps what is done.");
 
@@ -130,7 +131,7 @@ static class Program
 
         string resultsPath = Path.Combine(outFolder, "results.csv");
         string summaryPath = Path.Combine(outFolder, "summary.txt");
-        WriteResults(resultsPath, results);
+        WriteResults(resultsPath, results, reference.Columns);
 
         string summary = Summary.Build(songFolder, files.Count, referencePath, reference, results,
             startSeconds, durationSeconds, jobs, wallClock.Elapsed, canceled);
@@ -150,7 +151,7 @@ static class Program
         var result = new SongResult
         {
             File = Path.GetRelativePath(songFolder, file),
-            Reference = reference.Find(name),
+            References = reference.Find(name),
             Tag = ReadBpmTag(file)
         };
 
@@ -197,28 +198,33 @@ static class Program
         }
     }
 
-    private static void WriteResults(string path, List<SongResult> results)
+    private static void WriteResults(string path, List<SongResult> results, IReadOnlyList<string> columns)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("File,Reference,Tag,V1,V2,V1Result,V2Result,V1Diff,V2Diff,V1V2Same,DecodeMs,V1Ms,V2Ms,Error");
+        sb.AppendJoin(',', [
+            "File",
+            .. columns.Select(Csv.Field),
+            "Tag", "V1", "V2",
+            .. columns.SelectMany(c => new[] { Csv.Field("V1 vs " + c), Csv.Field("V2 vs " + c) }),
+            "V1V2Same", "DecodeMs", "V1Ms", "V2Ms", "Error"]);
+        sb.AppendLine();
 
         foreach (var r in results)
         {
-            sb.AppendJoin(',',
+            sb.AppendJoin(',', [
                 Csv.Field(r.File),
-                Csv.Number(r.Reference),
+                .. r.References.Select(Csv.Number),
                 Csv.Number(r.Tag),
                 Csv.Number(r.V1),
                 Csv.Number(r.V2),
-                r.Error == null && r.Reference.HasValue ? Accuracy.Classify(r.V1, r.Reference.Value) : "",
-                r.Error == null && r.Reference.HasValue ? Accuracy.Classify(r.V2, r.Reference.Value) : "",
-                Csv.Number(r.V1 - r.Reference),
-                Csv.Number(r.V2 - r.Reference),
+                .. r.References.SelectMany(bpm => r.Error == null && bpm.HasValue
+                    ? new[] { Accuracy.Classify(r.V1, bpm.Value), Accuracy.Classify(r.V2, bpm.Value) }
+                    : new[] { "", "" }),
                 r.Error == null ? (r.V1 == r.V2 ? "yes" : "no") : "",
                 Csv.Number(r.Error == null ? Math.Round(r.DecodeMs) : null),
                 Csv.Number(r.Error == null ? Math.Round(r.V1Ms) : null),
                 Csv.Number(r.Error == null ? Math.Round(r.V2Ms) : null),
-                Csv.Field(r.Error ?? ""));
+                Csv.Field(r.Error ?? "")]);
             sb.AppendLine();
         }
 
@@ -229,7 +235,7 @@ static class Program
 sealed class SongResult
 {
     public string File { get; init; } = "";
-    public double? Reference { get; init; }
+    public double?[] References { get; init; } = [];
     public int? Tag { get; init; }
     public int? V1 { get; set; }
     public int? V2 { get; set; }
@@ -240,42 +246,71 @@ sealed class SongResult
 }
 
 /// <summary>
-/// Reference BPMs from a CSV of Name,BPM. Rows without a BPM (including a
-/// header row) are counted but ignored.
+/// Reference BPMs from a CSV of Name,BPM, or of Name followed by several BPM
+/// columns named in a header row (one column per detector, say). Name may
+/// include the .mp3 extension. Blank, zero and non-numeric BPMs count as missing.
 /// </summary>
 sealed class ReferenceList
 {
-    public static readonly ReferenceList Empty = new();
+    public static readonly ReferenceList Empty = new([]);
 
-    private readonly Dictionary<string, double> _bpmByName = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, double?[]> _bpmsByName = new(StringComparer.OrdinalIgnoreCase);
 
+    private ReferenceList(IReadOnlyList<string> columns) => Columns = columns;
+
+    public IReadOnlyList<string> Columns { get; }
     public int Rows { get; private set; }
-    public int WithBpm => _bpmByName.Count;
     public int Duplicates { get; private set; }
+
+    public int WithBpm(int column) => _bpmsByName.Values.Count(bpms => bpms[column].HasValue);
 
     public static ReferenceList Load(string path)
     {
-        var list = new ReferenceList();
-        foreach (string line in File.ReadLines(path))
+        var rows = File.ReadLines(path)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Select(Csv.Parse)
+            .ToList();
+
+        // A first row whose second field is text, not a BPM, is a header naming the BPM columns
+        bool hasHeader = rows.Count > 0 && rows[0].Count >= 2
+            && rows[0][1].Trim().Length > 0
+            && !double.TryParse(rows[0][1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out _);
+        string[] columns = hasHeader
+            ? rows[0].Skip(1).Select(c => c.Trim()).ToArray()
+            : ["Reference"];
+
+        var list = new ReferenceList(columns);
+        foreach (var fields in rows.Skip(hasHeader ? 1 : 0))
         {
-            if (string.IsNullOrWhiteSpace(line)) continue;
+            string name = NormalizeName(fields[0]);
+            if (name.Length == 0) continue;
             list.Rows++;
 
-            var fields = Csv.Parse(line);
-            if (fields.Count < 2) continue;
+            var bpms = new double?[columns.Length];
+            for (int c = 0; c < columns.Length && c + 1 < fields.Count; c++)
+            {
+                if (TryBpm(fields[c + 1], out double bpm)) bpms[c] = bpm;
+            }
 
-            string name = fields[0].Trim();
-            if (name.Length == 0
-                || !double.TryParse(fields[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double bpm)
-                || bpm <= 0)
-                continue;
-
-            if (!list._bpmByName.TryAdd(name, bpm)) list.Duplicates++;
+            if (!list._bpmsByName.TryAdd(name, bpms)) list.Duplicates++;
         }
         return list;
     }
 
-    public double? Find(string name) => _bpmByName.TryGetValue(name.Trim(), out double bpm) ? bpm : null;
+    /// <summary>
+    /// The reference BPMs for a song, one per column, null where missing.
+    /// </summary>
+    public double?[] Find(string name) =>
+        _bpmsByName.TryGetValue(NormalizeName(name), out var bpms) ? bpms : new double?[Columns.Count];
+
+    private static string NormalizeName(string name)
+    {
+        name = name.Trim();
+        return name.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
+    }
+
+    private static bool TryBpm(string field, out double bpm) =>
+        double.TryParse(field.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out bpm) && bpm > 0;
 }
 
 static class Accuracy
@@ -305,7 +340,8 @@ static class Accuracy
         double est = estimate.Value;
         double diff = Math.Abs(est - reference);
 
-        if (est == Math.Round(reference, MidpointRounding.AwayFromZero)) return Exact;
+        // Nearest whole BPM; for a reference like 120.5, 120 and 121 both count
+        if (diff <= 0.5) return Exact;
         if (diff <= 1.0) return Within1;
         if (diff <= 0.04 * reference) return Within4Pct;
 
@@ -332,9 +368,9 @@ static class Summary
         sb.AppendLine($"Songs:      {songFolder} ({fileCount} MP3s, {results.Count} analysed)");
         if (referencePath != null)
         {
-            int matched = ok.Count(r => r.Reference.HasValue);
+            int matched = ok.Count(r => r.References.Any(bpm => bpm.HasValue));
             sb.AppendLine($"Reference:  {referencePath}");
-            sb.AppendLine($"            {reference.Rows} rows, {reference.WithBpm} with a BPM, {matched} matched to an analysed MP3" +
+            sb.AppendLine($"            {reference.Rows} songs, {matched} with a BPM matched to an analysed MP3" +
                           (reference.Duplicates > 0 ? $", {reference.Duplicates} duplicate names ignored" : ""));
         }
         else
@@ -367,32 +403,7 @@ static class Summary
         }
         sb.AppendLine();
 
-        // Accuracy against the reference
-        var scored = ok.Where(r => r.Reference.HasValue).ToList();
-        if (scored.Count == 0)
-        {
-            sb.AppendLine("Accuracy: no songs have a reference BPM yet.");
-        }
-        else
-        {
-            var v1 = scored.Select(r => Accuracy.Classify(r.V1, r.Reference!.Value)).ToList();
-            var v2 = scored.Select(r => Accuracy.Classify(r.V2, r.Reference!.Value)).ToList();
-            string[] withinOne = [Accuracy.Exact, Accuracy.Within1];
-            string[] withinFour = [.. withinOne, Accuracy.Within4Pct];
-            string[] anyMultiple = [.. withinFour, .. Accuracy.Multiples.Select(m => m.Label)];
-
-            sb.AppendLine($"Accuracy against reference ({scored.Count} songs)");
-            sb.AppendLine($"  {"",-38}{"V1",-16}{"V2",-16}");
-            Row(sb, "Exact", v1.Count(c => c == Accuracy.Exact), v2.Count(c => c == Accuracy.Exact), scored.Count);
-            Row(sb, "Within 1 BPM", v1.Count(withinOne.Contains), v2.Count(withinOne.Contains), scored.Count);
-            Row(sb, "Within 4%", v1.Count(withinFour.Contains), v2.Count(withinFour.Contains), scored.Count);
-            Row(sb, "Within 4%, or x2 / x1/2 / x3 / x1/3", v1.Count(anyMultiple.Contains), v2.Count(anyMultiple.Contains), scored.Count);
-            sb.AppendLine();
-            sb.AppendLine("  Breakdown");
-            foreach (string c in Accuracy.AllClasses)
-                Row(sb, "  " + c, v1.Count(x => x == c), v2.Count(x => x == c), scored.Count);
-        }
-        sb.AppendLine();
+        AppendAccuracy(sb, reference.Columns, ok);
 
         // The tags in the bank were written by an earlier bpmGenie; V1 should reproduce them
         var tagged = ok.Where(r => r.Tag.HasValue).ToList();
@@ -415,11 +426,78 @@ static class Summary
         return sb.ToString();
     }
 
+    /// <summary>
+    /// One row per reference column: the share of the songs with a BPM in that
+    /// column that V1 and V2 got right at each tolerance, then how the rest
+    /// were wrong.
+    /// </summary>
+    private static void AppendAccuracy(StringBuilder sb, IReadOnlyList<string> columns, List<SongResult> ok)
+    {
+        if (columns.Count == 0)
+        {
+            sb.AppendLine("Accuracy: no reference CSV.");
+            sb.AppendLine();
+            return;
+        }
+
+        string[] exact = [Accuracy.Exact];
+        string[] withinOne = [.. exact, Accuracy.Within1];
+        string[] withinFour = [.. withinOne, Accuracy.Within4Pct];
+        string[] anyMultiple = [.. withinFour, .. Accuracy.Multiples.Select(m => m.Label)];
+        (string Label, string[] Classes)[] tolerances =
+        [
+            ("Exact", exact),
+            ("Within 1", withinOne),
+            ("Within 4%", withinFour),
+            ("4% or x2,1/2,3,1/3", anyMultiple),
+        ];
+        string[] mistakes = [.. Accuracy.Multiples.Select(m => m.Label), Accuracy.Wrong, Accuracy.None];
+
+        var scored = new List<(string Column, List<string> V1, List<string> V2)>();
+        for (int c = 0; c < columns.Count; c++)
+        {
+            var rows = ok.Where(r => r.References[c].HasValue).ToList();
+            scored.Add((columns[c],
+                rows.Select(r => Accuracy.Classify(r.V1, r.References[c]!.Value)).ToList(),
+                rows.Select(r => Accuracy.Classify(r.V2, r.References[c]!.Value)).ToList()));
+        }
+
+        int nameWidth = Math.Max(12, columns.Max(c => c.Length) + 2);
+
+        sb.AppendLine("Accuracy against reference (% of the songs with a BPM in that column)");
+        sb.Append("".PadRight(2 + nameWidth + 6));
+        foreach (var (label, _) in tolerances) sb.Append($"  {label,-17}");
+        sb.AppendLine();
+        sb.Append($"  {"Reference".PadRight(nameWidth)}{"Songs",6}");
+        foreach (var _ in tolerances) sb.Append($"  {"V1",7} {"V2",7}  ");
+        sb.AppendLine();
+        foreach (var (column, v1, v2) in scored)
+        {
+            sb.Append($"  {column.PadRight(nameWidth)}{v1.Count,6}");
+            foreach (var (_, classes) in tolerances)
+                sb.Append($"  {Percent(v1.Count(classes.Contains), v1.Count),7} {Percent(v2.Count(classes.Contains), v2.Count),7}  ");
+            sb.AppendLine();
+        }
+        sb.AppendLine();
+
+        sb.AppendLine("Misses by kind (songs, V1 / V2)");
+        sb.Append($"  {"Reference".PadRight(nameWidth)}");
+        foreach (string m in mistakes) sb.Append($"{m,13}");
+        sb.AppendLine();
+        foreach (var (column, v1, v2) in scored)
+        {
+            sb.Append($"  {column.PadRight(nameWidth)}");
+            foreach (string m in mistakes) sb.Append($"{$"{v1.Count(x => x == m)} / {v2.Count(x => x == m)}",13}");
+            sb.AppendLine();
+        }
+        sb.AppendLine();
+    }
+
+    private static string Percent(int n, int total) =>
+        total == 0 ? "-" : $"{100.0 * n / total:F1}%";
+
     private static string Count(int n, int total) =>
         total == 0 ? $"{n}" : $"{n,5}  ({100.0 * n / total:F1}%)";
-
-    private static void Row(StringBuilder sb, string label, int v1, int v2, int total) =>
-        sb.AppendLine($"  {label,-38}{Count(v1, total),-16}{Count(v2, total),-16}");
 }
 
 static class Csv
