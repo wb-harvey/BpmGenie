@@ -8,7 +8,7 @@ FEATURES
 --------
 * Free software
 * Very high-accuracy BPM detection
-* Inspired by the digital signal processing (DSP) strategy from MIXXX (https://mixxx.org/), GPL
+* Inspired by the digital signal processing (DSP) approach of MIXXX (https://mixxx.org/); no MIXXX code is used
 ** Uses FFmpeg to decode the first 60 seconds into mono 11025Hz PCM data
 ** Computes the Short-Time Fourier Transform (STFT)
 ** Uses complex domain onset detection (change in magnitude and phase) to find beat onsets
@@ -48,6 +48,8 @@ This program is free software; you can redistribute it and/or modify it under th
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License along with this program (the LICENSE file). If not, see <https://www.gnu.org/licenses/>.
+
+bpmGenie ships with NWaves (MIT), TagLib# (LGPL 2.1) and an LGPL build of FFmpeg 9.0.2, each under its own license. The release's licenses folder has their notices and license texts (THIRD-PARTY-NOTICES.txt).
 
 CONTRIBUTING
 ------------
