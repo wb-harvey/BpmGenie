@@ -9,6 +9,8 @@
     <RootNamespace>bpmGenie</RootNamespace>
     <AssemblyName>BpmGenie.Core</AssemblyName>
     <Version>2.0.3</Version>
+    <!-- The product version stays "2.0.3": the SDK appends "+<git commit>" when it can read the repo -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>BpmGenie.Core</Product>
     <Description>BPM detection of bpmGenie: complex domain onsets, autocorrelation, fractional beat period</Description>
     <Copyright>(c) 2026 William Harvey</Copyright>
